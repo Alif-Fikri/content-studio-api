@@ -14,15 +14,16 @@ import (
 type Storage interface {
 	Download(ctx context.Context, key, destPath string) error
 	Upload(ctx context.Context, key, srcPath string) error
+	Delete(ctx context.Context, key string) error
 }
 
 type Pool struct {
-	jobs             *Repo
-	items            *content.Repo
-	storage          Storage
-	backgroundAudio  string
-	pollInterval     time.Duration
-	workerCount      int
+	jobs            *Repo
+	items           *content.Repo
+	storage         Storage
+	backgroundAudio string
+	pollInterval    time.Duration
+	workerCount     int
 }
 
 func NewPool(jobs *Repo, items *content.Repo, storage Storage, backgroundAudio string, workerCount int) *Pool {
@@ -107,6 +108,10 @@ func (p *Pool) run(ctx context.Context, job *Job) {
 	if err := p.items.SetRenderedVideoKey(ctx, item.ID, renderedKey); err != nil {
 		_ = p.jobs.MarkFailed(ctx, job.ID, err.Error())
 		return
+	}
+
+	if err := p.storage.Delete(ctx, *item.RawVideoKey); err == nil {
+		_ = p.items.ClearRawVideoKey(ctx, item.ID)
 	}
 
 	_ = p.jobs.MarkDone(ctx, job.ID)

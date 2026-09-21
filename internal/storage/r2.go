@@ -96,3 +96,11 @@ func (r *R2) Upload(ctx context.Context, key, srcPath string) error {
 	})
 	return err
 }
+
+func (r *R2) Delete(ctx context.Context, key string) error {
+	_, err := r.client.DeleteObject(ctx, &s3.DeleteObjectInput{
+		Bucket: aws.String(r.bucket),
+		Key:    aws.String(key),
+	})
+	return err
+}

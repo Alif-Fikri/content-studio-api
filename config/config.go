@@ -3,22 +3,24 @@ package config
 import (
 	"fmt"
 	"os"
+	"strconv"
 )
 
 type Config struct {
-	Port                string
-	DatabaseURL         string
-	SupabaseJWKSURL     string
-	R2AccountID         string
-	R2AccessKeyID       string
-	R2SecretAccessKey   string
-	R2Bucket            string
-	AnthropicAPIKey     string
-	OpenAIAPIKey        string
-	GeminiAPIKey        string
-	DefaultAIProvider   string
-	MetaSystemUserToken string
-	MetaAdAccountID     string
+	Port                  string
+	DatabaseURL           string
+	SupabaseJWKSURL       string
+	R2AccountID           string
+	R2AccessKeyID         string
+	R2SecretAccessKey     string
+	R2Bucket              string
+	AnthropicAPIKey       string
+	OpenAIAPIKey          string
+	GeminiAPIKey          string
+	DefaultAIProvider     string
+	MetaSystemUserToken   string
+	MetaAdAccountID       string
+	RenderedRetentionDays int
 }
 
 func Load() (*Config, error) {
@@ -37,6 +39,12 @@ func Load() (*Config, error) {
 		MetaSystemUserToken: os.Getenv("META_SYSTEM_USER_TOKEN"),
 		MetaAdAccountID:     os.Getenv("META_AD_ACCOUNT_ID"),
 	}
+
+	retentionDays, err := strconv.Atoi(getEnv("RENDERED_RETENTION_DAYS", "7"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid RENDERED_RETENTION_DAYS: %w", err)
+	}
+	cfg.RenderedRetentionDays = retentionDays
 
 	required := map[string]string{
 		"DATABASE_URL":           cfg.DatabaseURL,

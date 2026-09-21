@@ -64,6 +64,9 @@ func main() {
 	renderPool := render.NewPool(renderRepo, contentRepo, r2, backgroundAudioPath, renderWorkerCount)
 	renderPool.Start(ctx)
 
+	cleanup := content.NewCleanup(contentRepo, r2, cfg.RenderedRetentionDays)
+	cleanup.Start(ctx)
+
 	contentHandler := content.NewHandler(contentRepo, aiRegistry, r2, renderRepo)
 	renderHandler := render.NewHandler(renderRepo)
 	adsHandler := ads.NewHandler(adsRepo, metaClient)
