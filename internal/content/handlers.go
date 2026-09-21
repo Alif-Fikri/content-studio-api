@@ -36,6 +36,7 @@ func (h *Handler) Register(rg *gin.RouterGroup) {
 	rg.POST("/content-items/:id/upload-complete", h.uploadComplete)
 	rg.GET("/content-items", h.list)
 	rg.GET("/content-items/:id", h.get)
+	rg.GET("/content-items/:id/download-url", h.downloadURL)
 	rg.DELETE("/content-items/:id", h.delete)
 	rg.POST("/content-items/:id/generate", h.generate)
 	rg.POST("/content-items/:id/approve", h.approve)
@@ -96,6 +97,31 @@ func (h *Handler) get(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, item)
+}
+
+func (h *Handler) downloadURL(c *gin.Context) {
+	item, err := h.repo.Get(c.Request.Context(), c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+		return
+	}
+
+	key := item.RenderedVideoKey
+	if key == nil {
+		key = item.RawVideoKey
+	}
+	if key == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "no video available for this item"})
+		return
+	}
+
+	url, err := h.storage.PresignDownload(c.Request.Context(), *key)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"download_url": url})
 }
 
 func (h *Handler) delete(c *gin.Context) {
