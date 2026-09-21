@@ -14,6 +14,9 @@ type Config struct {
 	R2SecretAccessKey   string
 	R2Bucket            string
 	AnthropicAPIKey     string
+	OpenAIAPIKey        string
+	GeminiAPIKey        string
+	DefaultAIProvider   string
 	MetaSystemUserToken string
 	MetaAdAccountID     string
 }
@@ -28,26 +31,32 @@ func Load() (*Config, error) {
 		R2SecretAccessKey:   os.Getenv("R2_SECRET_ACCESS_KEY"),
 		R2Bucket:            os.Getenv("R2_BUCKET"),
 		AnthropicAPIKey:     os.Getenv("ANTHROPIC_API_KEY"),
+		OpenAIAPIKey:        os.Getenv("OPENAI_API_KEY"),
+		GeminiAPIKey:        os.Getenv("GEMINI_API_KEY"),
+		DefaultAIProvider:   getEnv("DEFAULT_AI_PROVIDER", "claude"),
 		MetaSystemUserToken: os.Getenv("META_SYSTEM_USER_TOKEN"),
 		MetaAdAccountID:     os.Getenv("META_AD_ACCOUNT_ID"),
 	}
 
 	required := map[string]string{
-		"DATABASE_URL":          cfg.DatabaseURL,
-		"SUPABASE_JWKS_URL":     cfg.SupabaseJWKSURL,
-		"R2_ACCOUNT_ID":         cfg.R2AccountID,
-		"R2_ACCESS_KEY_ID":      cfg.R2AccessKeyID,
-		"R2_SECRET_ACCESS_KEY":  cfg.R2SecretAccessKey,
-		"R2_BUCKET":             cfg.R2Bucket,
-		"ANTHROPIC_API_KEY":     cfg.AnthropicAPIKey,
+		"DATABASE_URL":           cfg.DatabaseURL,
+		"SUPABASE_JWKS_URL":      cfg.SupabaseJWKSURL,
+		"R2_ACCOUNT_ID":          cfg.R2AccountID,
+		"R2_ACCESS_KEY_ID":       cfg.R2AccessKeyID,
+		"R2_SECRET_ACCESS_KEY":   cfg.R2SecretAccessKey,
+		"R2_BUCKET":              cfg.R2Bucket,
 		"META_SYSTEM_USER_TOKEN": cfg.MetaSystemUserToken,
-		"META_AD_ACCOUNT_ID":    cfg.MetaAdAccountID,
+		"META_AD_ACCOUNT_ID":     cfg.MetaAdAccountID,
 	}
 
 	for name, val := range required {
 		if val == "" {
 			return nil, fmt.Errorf("missing required env var: %s", name)
 		}
+	}
+
+	if cfg.AnthropicAPIKey == "" && cfg.OpenAIAPIKey == "" && cfg.GeminiAPIKey == "" {
+		return nil, fmt.Errorf("at least one AI provider key must be set: ANTHROPIC_API_KEY, OPENAI_API_KEY, or GEMINI_API_KEY")
 	}
 
 	return cfg, nil

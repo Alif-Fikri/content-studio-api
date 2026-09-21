@@ -8,7 +8,7 @@ import (
 )
 
 type Generator interface {
-	Generate(ctx context.Context, product, brief string) (caption string, script []ScriptBeat, err error)
+	Generate(ctx context.Context, provider, model, prompt string) (caption string, script []ScriptBeat, err error)
 }
 
 type Storage interface {
@@ -107,24 +107,23 @@ func (h *Handler) delete(c *gin.Context) {
 }
 
 type generateRequest struct {
-	Brief string `json:"brief"`
+	Prompt   string `json:"prompt" binding:"required"`
+	Provider string `json:"provider"`
+	Model    string `json:"model"`
 }
 
 func (h *Handler) generate(c *gin.Context) {
 	id := c.Param("id")
 
 	var req generateRequest
-	_ = c.ShouldBindJSON(&req)
-
-	item, err := h.repo.Get(c.Request.Context(), id)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	brief := item.Brief
-	if req.Brief != "" {
-		brief = req.Brief
+	if _, err := h.repo.Get(c.Request.Context(), id); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+		return
 	}
 
 	if err := h.repo.SetStatus(c.Request.Context(), id, StatusGenerating); err != nil {
@@ -132,14 +131,14 @@ func (h *Handler) generate(c *gin.Context) {
 		return
 	}
 
-	go h.runGenerate(id, item.Product, brief)
+	go h.runGenerate(id, req.Provider, req.Model, req.Prompt)
 
 	c.Status(http.StatusAccepted)
 }
 
-func (h *Handler) runGenerate(id, product, brief string) {
+func (h *Handler) runGenerate(id, provider, model, prompt string) {
 	ctx := context.Background()
-	caption, script, err := h.generator.Generate(ctx, product, brief)
+	caption, script, err := h.generator.Generate(ctx, provider, model, prompt)
 	if err != nil {
 		_ = h.repo.SetStatus(ctx, id, StatusDraft)
 		return

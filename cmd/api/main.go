@@ -9,8 +9,8 @@ import (
 
 	"github.com/alchemist/content-studio-api/config"
 	"github.com/alchemist/content-studio-api/internal/ads"
+	"github.com/alchemist/content-studio-api/internal/ai"
 	"github.com/alchemist/content-studio-api/internal/auth"
-	"github.com/alchemist/content-studio-api/internal/claude"
 	"github.com/alchemist/content-studio-api/internal/content"
 	"github.com/alchemist/content-studio-api/internal/db"
 	"github.com/alchemist/content-studio-api/internal/render"
@@ -44,7 +44,17 @@ func main() {
 		log.Fatal(err)
 	}
 
-	claudeClient := claude.NewClient(cfg.AnthropicAPIKey)
+	aiRegistry := ai.NewRegistry(cfg.DefaultAIProvider)
+	if cfg.AnthropicAPIKey != "" {
+		aiRegistry.Register("claude", ai.NewClaudeProvider(cfg.AnthropicAPIKey))
+	}
+	if cfg.OpenAIAPIKey != "" {
+		aiRegistry.Register("openai", ai.NewOpenAIProvider(cfg.OpenAIAPIKey))
+	}
+	if cfg.GeminiAPIKey != "" {
+		aiRegistry.Register("gemini", ai.NewGeminiProvider(cfg.GeminiAPIKey))
+	}
+
 	metaClient := ads.NewMetaClient(cfg.MetaSystemUserToken, cfg.MetaAdAccountID)
 
 	contentRepo := content.NewRepo(pool)
@@ -54,7 +64,7 @@ func main() {
 	renderPool := render.NewPool(renderRepo, contentRepo, r2, backgroundAudioPath, renderWorkerCount)
 	renderPool.Start(ctx)
 
-	contentHandler := content.NewHandler(contentRepo, claudeClient, r2, renderRepo)
+	contentHandler := content.NewHandler(contentRepo, aiRegistry, r2, renderRepo)
 	renderHandler := render.NewHandler(renderRepo)
 	adsHandler := ads.NewHandler(adsRepo, metaClient)
 
