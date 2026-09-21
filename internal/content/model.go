@@ -5,12 +5,12 @@ import "time"
 type Status string
 
 const (
-	StatusDraft          Status = "draft"
-	StatusGenerating     Status = "generating"
-	StatusReadyToRender  Status = "ready_to_render"
-	StatusRendering      Status = "rendering"
-	StatusReady          Status = "ready"
-	StatusFailed         Status = "failed"
+	StatusDraft         Status = "draft"
+	StatusGenerating    Status = "generating"
+	StatusReadyToRender Status = "ready_to_render"
+	StatusRendering     Status = "rendering"
+	StatusReady         Status = "ready"
+	StatusFailed        Status = "failed"
 )
 
 type ScriptBeat struct {

@@ -110,9 +110,5 @@ func (p *Pool) run(ctx context.Context, job *Job) {
 		return
 	}
 
-	if err := p.storage.Delete(ctx, *item.RawVideoKey); err == nil {
-		_ = p.items.ClearRawVideoKey(ctx, item.ID)
-	}
-
 	_ = p.jobs.MarkDone(ctx, job.ID)
 }

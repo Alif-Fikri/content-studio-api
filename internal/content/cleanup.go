@@ -2,6 +2,7 @@ package content
 
 import (
 	"context"
+	"log"
 	"time"
 )
 
@@ -40,13 +41,24 @@ func (c *Cleanup) Start(ctx context.Context) {
 func (c *Cleanup) run(ctx context.Context) {
 	items, err := c.repo.ListExpiredRendered(ctx, c.retentionDays)
 	if err != nil {
+		log.Printf("cleanup: list expired rendered items: %v", err)
 		return
 	}
 
 	for _, item := range items {
+		if item.RawVideoKey != nil {
+			if err := c.storage.Delete(ctx, *item.RawVideoKey); err != nil {
+				log.Printf("cleanup: delete raw video %s for item %s: %v", *item.RawVideoKey, item.ID, err)
+			}
+		}
+
 		if err := c.storage.Delete(ctx, item.RenderedVideoKey); err != nil {
+			log.Printf("cleanup: delete rendered video %s for item %s: %v", item.RenderedVideoKey, item.ID, err)
 			continue
 		}
-		_ = c.repo.ClearRenderedVideoKey(ctx, item.ID)
+
+		if err := c.repo.ClearVideoKeys(ctx, item.ID); err != nil {
+			log.Printf("cleanup: clear video keys for item %s: %v", item.ID, err)
+		}
 	}
 }

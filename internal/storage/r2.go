@@ -13,9 +13,9 @@ import (
 )
 
 type R2 struct {
-	client *s3.Client
+	client  *s3.Client
 	presign *s3.PresignClient
-	bucket string
+	bucket  string
 }
 
 func NewR2(ctx context.Context, accountID, accessKeyID, secretAccessKey, bucket string) (*R2, error) {

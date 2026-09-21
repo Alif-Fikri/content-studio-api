@@ -68,28 +68,22 @@ func (r *Repo) SetRawVideoKey(ctx context.Context, id, key string) error {
 	return err
 }
 
-func (r *Repo) ClearRawVideoKey(ctx context.Context, id string) error {
+func (r *Repo) ClearVideoKeys(ctx context.Context, id string) error {
 	_, err := r.pool.Exec(ctx, `
-		update content_items set raw_video_key = null, updated_at = now() where id = $1
-	`, id)
-	return err
-}
-
-func (r *Repo) ClearRenderedVideoKey(ctx context.Context, id string) error {
-	_, err := r.pool.Exec(ctx, `
-		update content_items set rendered_video_key = null, updated_at = now() where id = $1
+		update content_items set raw_video_key = null, rendered_video_key = null, updated_at = now() where id = $1
 	`, id)
 	return err
 }
 
 type ExpiredRenderedItem struct {
 	ID               string
+	RawVideoKey      *string
 	RenderedVideoKey string
 }
 
 func (r *Repo) ListExpiredRendered(ctx context.Context, retentionDays int) ([]ExpiredRenderedItem, error) {
 	rows, err := r.pool.Query(ctx, `
-		select id, rendered_video_key
+		select id, raw_video_key, rendered_video_key
 		from content_items
 		where status = 'ready'
 		  and rendered_video_key is not null
@@ -103,7 +97,7 @@ func (r *Repo) ListExpiredRendered(ctx context.Context, retentionDays int) ([]Ex
 	var items []ExpiredRenderedItem
 	for rows.Next() {
 		var item ExpiredRenderedItem
-		if err := rows.Scan(&item.ID, &item.RenderedVideoKey); err != nil {
+		if err := rows.Scan(&item.ID, &item.RawVideoKey, &item.RenderedVideoKey); err != nil {
 			return nil, err
 		}
 		items = append(items, item)

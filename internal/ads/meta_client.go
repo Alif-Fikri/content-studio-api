@@ -8,8 +8,8 @@ import (
 )
 
 type MetaClient struct {
-	httpClient *http.Client
-	token      string
+	httpClient  *http.Client
+	token       string
 	adAccountID string
 }
 
