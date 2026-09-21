@@ -1,0 +1,16 @@
+# binaries
+/bin
+/tmp
+*.exe
+*.test
+*.out
+
+# env
+.env
+.env.*
+
+# os
+.DS_Store
+
+# internal docs
+/docs
