@@ -44,6 +44,9 @@ func Load() (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid RENDERED_RETENTION_DAYS: %w", err)
 	}
+	if retentionDays <= 0 {
+		return nil, fmt.Errorf("RENDERED_RETENTION_DAYS must be a positive number of days, got %d", retentionDays)
+	}
 	cfg.RenderedRetentionDays = retentionDays
 
 	required := map[string]string{
