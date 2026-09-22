@@ -4,7 +4,11 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"os/signal"
+	"syscall"
+	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 
 	"github.com/alchemist/content-studio-api/config"
@@ -19,6 +23,7 @@ import (
 
 const renderWorkerCount = 2
 const backgroundAudioPath = "assets/background.mp3"
+const shutdownTimeout = 15 * time.Second
 
 func main() {
 	cfg, err := config.Load()
@@ -26,7 +31,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	ctx := context.Background()
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
 	pool, err := db.NewPool(ctx, cfg.DatabaseURL)
 	if err != nil {
@@ -72,7 +78,22 @@ func main() {
 	adsHandler := ads.NewHandler(adsRepo, metaClient)
 
 	router := gin.Default()
+
+	if len(cfg.CORSAllowedOrigins) > 0 {
+		router.Use(cors.New(cors.Config{
+			AllowOrigins:     cfg.CORSAllowedOrigins,
+			AllowMethods:     []string{"GET", "POST", "DELETE", "OPTIONS"},
+			AllowHeaders:     []string{"Authorization", "Content-Type"},
+			AllowCredentials: true,
+			MaxAge:           12 * time.Hour,
+		}))
+	}
+
 	router.GET("/health", func(c *gin.Context) {
+		if err := pool.Ping(c.Request.Context()); err != nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "degraded", "error": "database unreachable"})
+			return
+		}
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
@@ -82,7 +103,23 @@ func main() {
 	renderHandler.Register(api)
 	adsHandler.Register(api)
 
-	if err := router.Run(":" + cfg.Port); err != nil {
-		log.Fatal(err)
+	server := &http.Server{
+		Addr:    ":" + cfg.Port,
+		Handler: router,
+	}
+
+	go func() {
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatal(err)
+		}
+	}()
+
+	<-ctx.Done()
+	log.Println("shutting down")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer cancel()
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		log.Printf("server shutdown: %v", err)
 	}
 }

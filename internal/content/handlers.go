@@ -14,6 +14,7 @@ type Generator interface {
 type Storage interface {
 	PresignUpload(ctx context.Context, key string) (string, error)
 	PresignDownload(ctx context.Context, key string) (string, error)
+	Delete(ctx context.Context, key string) error
 }
 
 type RenderJobCreator interface {
@@ -125,7 +126,33 @@ func (h *Handler) downloadURL(c *gin.Context) {
 }
 
 func (h *Handler) delete(c *gin.Context) {
-	if err := h.repo.Delete(c.Request.Context(), c.Param("id")); err != nil {
+	ctx := c.Request.Context()
+	id := c.Param("id")
+
+	item, err := h.repo.Get(ctx, id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+		return
+	}
+	if item.Status == StatusRendering {
+		c.JSON(http.StatusConflict, gin.H{"error": "cannot delete while a render is in progress"})
+		return
+	}
+
+	if item.RawVideoKey != nil {
+		if err := h.storage.Delete(ctx, *item.RawVideoKey); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	}
+	if item.RenderedVideoKey != nil {
+		if err := h.storage.Delete(ctx, *item.RenderedVideoKey); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	}
+
+	if err := h.repo.Delete(ctx, id); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -147,8 +174,13 @@ func (h *Handler) generate(c *gin.Context) {
 		return
 	}
 
-	if _, err := h.repo.Get(c.Request.Context(), id); err != nil {
+	item, err := h.repo.Get(c.Request.Context(), id)
+	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+		return
+	}
+	if item.Status != StatusDraft {
+		c.JSON(http.StatusConflict, gin.H{"error": "generate is only allowed while the item is in draft status"})
 		return
 	}
 
@@ -190,8 +222,12 @@ func (h *Handler) approve(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return
 	}
-	if item.Status == StatusRendering {
+	switch item.Status {
+	case StatusRendering:
 		c.JSON(http.StatusConflict, gin.H{"error": "a render is already in progress for this item"})
+		return
+	case StatusDraft, StatusGenerating:
+		c.JSON(http.StatusConflict, gin.H{"error": "approve requires a generated script first"})
 		return
 	}
 

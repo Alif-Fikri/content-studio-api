@@ -11,6 +11,8 @@ import (
 	"github.com/alchemist/content-studio-api/internal/content"
 )
 
+const ffmpegTimeout = 10 * time.Minute
+
 type Storage interface {
 	Download(ctx context.Context, key, destPath string) error
 	Upload(ctx context.Context, key, srcPath string) error
@@ -92,8 +94,11 @@ func (p *Pool) run(ctx context.Context, job *Job) {
 		return
 	}
 
+	ffmpegCtx, cancel := context.WithTimeout(ctx, ffmpegTimeout)
+	defer cancel()
+
 	args := BuildFFmpegArgs(inputPath, p.backgroundAudio, outputPath, item.Script)
-	cmd := exec.CommandContext(ctx, "ffmpeg", args...)
+	cmd := exec.CommandContext(ffmpegCtx, "ffmpeg", args...)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		_ = p.jobs.MarkFailed(ctx, job.ID, fmt.Sprintf("%v: %s", err, string(output)))
 		return

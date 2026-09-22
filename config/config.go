@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 )
 
 type Config struct {
@@ -21,6 +22,7 @@ type Config struct {
 	MetaSystemUserToken   string
 	MetaAdAccountID       string
 	RenderedRetentionDays int
+	CORSAllowedOrigins    []string
 }
 
 func Load() (*Config, error) {
@@ -48,6 +50,14 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("RENDERED_RETENTION_DAYS must be a positive number of days, got %d", retentionDays)
 	}
 	cfg.RenderedRetentionDays = retentionDays
+
+	if raw := os.Getenv("CORS_ALLOWED_ORIGINS"); raw != "" {
+		for origin := range strings.SplitSeq(raw, ",") {
+			if trimmed := strings.TrimSpace(origin); trimmed != "" {
+				cfg.CORSAllowedOrigins = append(cfg.CORSAllowedOrigins, trimmed)
+			}
+		}
+	}
 
 	required := map[string]string{
 		"DATABASE_URL":           cfg.DatabaseURL,
