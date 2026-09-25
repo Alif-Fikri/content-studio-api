@@ -8,38 +8,40 @@ import (
 )
 
 type Config struct {
-	Port                  string
-	DatabaseURL           string
-	SupabaseJWKSURL       string
-	R2AccountID           string
-	R2AccessKeyID         string
-	R2SecretAccessKey     string
-	R2Bucket              string
-	AnthropicAPIKey       string
-	OpenAIAPIKey          string
-	GeminiAPIKey          string
-	DefaultAIProvider     string
-	MetaSystemUserToken   string
-	MetaAdAccountID       string
-	RenderedRetentionDays int
-	CORSAllowedOrigins    []string
+	Port                             string
+	DatabaseURL                      string
+	SupabaseJWKSURL                  string
+	R2AccountID                      string
+	R2AccessKeyID                    string
+	R2SecretAccessKey                string
+	R2Bucket                         string
+	AnthropicAPIKey                  string
+	OpenAIAPIKey                     string
+	GeminiAPIKey                     string
+	DefaultAIProvider                string
+	MetaSystemUserToken              string
+	MetaAdAccountID                  string
+	RenderedRetentionDays            int
+	CORSAllowedOrigins               []string
+	GooglePlayServiceAccountJSONPath string
 }
 
 func Load() (*Config, error) {
 	cfg := &Config{
-		Port:                getEnv("PORT", "8080"),
-		DatabaseURL:         os.Getenv("DATABASE_URL"),
-		SupabaseJWKSURL:     os.Getenv("SUPABASE_JWKS_URL"),
-		R2AccountID:         os.Getenv("R2_ACCOUNT_ID"),
-		R2AccessKeyID:       os.Getenv("R2_ACCESS_KEY_ID"),
-		R2SecretAccessKey:   os.Getenv("R2_SECRET_ACCESS_KEY"),
-		R2Bucket:            os.Getenv("R2_BUCKET"),
-		AnthropicAPIKey:     os.Getenv("ANTHROPIC_API_KEY"),
-		OpenAIAPIKey:        os.Getenv("OPENAI_API_KEY"),
-		GeminiAPIKey:        os.Getenv("GEMINI_API_KEY"),
-		DefaultAIProvider:   getEnv("DEFAULT_AI_PROVIDER", "claude"),
-		MetaSystemUserToken: os.Getenv("META_SYSTEM_USER_TOKEN"),
-		MetaAdAccountID:     os.Getenv("META_AD_ACCOUNT_ID"),
+		Port:                             getEnv("PORT", "8080"),
+		DatabaseURL:                      os.Getenv("DATABASE_URL"),
+		SupabaseJWKSURL:                  os.Getenv("SUPABASE_JWKS_URL"),
+		R2AccountID:                      os.Getenv("R2_ACCOUNT_ID"),
+		R2AccessKeyID:                    os.Getenv("R2_ACCESS_KEY_ID"),
+		R2SecretAccessKey:                os.Getenv("R2_SECRET_ACCESS_KEY"),
+		R2Bucket:                         os.Getenv("R2_BUCKET"),
+		AnthropicAPIKey:                  os.Getenv("ANTHROPIC_API_KEY"),
+		OpenAIAPIKey:                     os.Getenv("OPENAI_API_KEY"),
+		GeminiAPIKey:                     os.Getenv("GEMINI_API_KEY"),
+		DefaultAIProvider:                getEnv("DEFAULT_AI_PROVIDER", "claude"),
+		MetaSystemUserToken:              os.Getenv("META_SYSTEM_USER_TOKEN"),
+		MetaAdAccountID:                  os.Getenv("META_AD_ACCOUNT_ID"),
+		GooglePlayServiceAccountJSONPath: os.Getenv("GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_PATH"),
 	}
 
 	retentionDays, err := strconv.Atoi(getEnv("RENDERED_RETENTION_DAYS", "7"))

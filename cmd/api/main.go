@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"os"
 	"os/signal"
 	"syscall"
 	"time"
@@ -14,9 +15,11 @@ import (
 	"github.com/alchemist/content-studio-api/config"
 	"github.com/alchemist/content-studio-api/internal/ads"
 	"github.com/alchemist/content-studio-api/internal/ai"
+	"github.com/alchemist/content-studio-api/internal/apps"
 	"github.com/alchemist/content-studio-api/internal/auth"
 	"github.com/alchemist/content-studio-api/internal/content"
 	"github.com/alchemist/content-studio-api/internal/db"
+	"github.com/alchemist/content-studio-api/internal/playstore"
 	"github.com/alchemist/content-studio-api/internal/render"
 	"github.com/alchemist/content-studio-api/internal/storage"
 )
@@ -63,9 +66,22 @@ func main() {
 
 	metaClient := ads.NewMetaClient(cfg.MetaSystemUserToken, cfg.MetaAdAccountID)
 
+	var playstoreClient *playstore.Client
+	if cfg.GooglePlayServiceAccountJSONPath != "" {
+		serviceAccountJSON, err := os.ReadFile(cfg.GooglePlayServiceAccountJSONPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+		playstoreClient, err = playstore.NewClient(ctx, serviceAccountJSON)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
 	contentRepo := content.NewRepo(pool)
 	renderRepo := render.NewRepo(pool)
 	adsRepo := ads.NewRepo(pool)
+	appsRepo := apps.NewRepo(pool)
 
 	renderPool := render.NewPool(renderRepo, contentRepo, r2, backgroundAudioPath, renderWorkerCount)
 	renderPool.Start(ctx)
@@ -76,6 +92,12 @@ func main() {
 	contentHandler := content.NewHandler(contentRepo, aiRegistry, r2, renderRepo)
 	renderHandler := render.NewHandler(renderRepo)
 	adsHandler := ads.NewHandler(adsRepo, metaClient)
+
+	var appsPublisher apps.Publisher
+	if playstoreClient != nil {
+		appsPublisher = playstoreClient
+	}
+	appsHandler := apps.NewHandler(appsRepo, r2, appsPublisher)
 
 	router := gin.Default()
 
@@ -102,6 +124,7 @@ func main() {
 	contentHandler.Register(api)
 	renderHandler.Register(api)
 	adsHandler.Register(api)
+	appsHandler.Register(api)
 
 	server := &http.Server{
 		Addr:    ":" + cfg.Port,
