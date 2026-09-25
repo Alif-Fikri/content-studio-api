@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"crypto/subtle"
 	"net/http"
 	"strings"
 
@@ -12,20 +13,34 @@ import (
 
 type Middleware struct {
 	keyfunc keyfunc.Keyfunc
+	apiKey  string
 }
 
-func NewMiddleware(jwksURL string) (*Middleware, error) {
+func NewMiddleware(jwksURL, apiKey string) (*Middleware, error) {
 	kf, err := keyfunc.NewDefaultCtx(context.Background(), []string{jwksURL})
 	if err != nil {
 		return nil, err
 	}
-	return &Middleware{keyfunc: kf}, nil
+	return &Middleware{keyfunc: kf, apiKey: apiKey}, nil
 }
 
 const ContextUserIDKey = "user_id"
 
 func (m *Middleware) RequireAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if m.apiKey != "" {
+			provided := c.GetHeader("X-API-Key")
+			if provided != "" {
+				if subtle.ConstantTimeCompare([]byte(provided), []byte(m.apiKey)) == 1 {
+					c.Set(ContextUserIDKey, "service")
+					c.Next()
+					return
+				}
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid api key"})
+				return
+			}
+		}
+
 		header := c.GetHeader("Authorization")
 		token, found := strings.CutPrefix(header, "Bearer ")
 		if !found || token == "" {

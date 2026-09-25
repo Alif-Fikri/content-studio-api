@@ -24,6 +24,7 @@ type Config struct {
 	RenderedRetentionDays            int
 	CORSAllowedOrigins               []string
 	GooglePlayServiceAccountJSONPath string
+	APIKey                           string
 }
 
 func Load() (*Config, error) {
@@ -42,6 +43,7 @@ func Load() (*Config, error) {
 		MetaSystemUserToken:              os.Getenv("META_SYSTEM_USER_TOKEN"),
 		MetaAdAccountID:                  os.Getenv("META_AD_ACCOUNT_ID"),
 		GooglePlayServiceAccountJSONPath: os.Getenv("GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_PATH"),
+		APIKey:                           os.Getenv("API_KEY"),
 	}
 
 	retentionDays, err := strconv.Atoi(getEnv("RENDERED_RETENTION_DAYS", "7"))

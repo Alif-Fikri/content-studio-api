@@ -48,7 +48,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	authMiddleware, err := auth.NewMiddleware(cfg.SupabaseJWKSURL)
+	authMiddleware, err := auth.NewMiddleware(cfg.SupabaseJWKSURL, cfg.APIKey)
 	if err != nil {
 		log.Fatal(err)
 	}
